@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const CachedManager = require('./CachedManager');
 const { TypeError, Error } = require('../errors');
 const GuildBan = require('../structures/GuildBan');
@@ -109,12 +110,12 @@ class GuildBanManager extends CachedManager {
       if (existing && !existing.partial) return existing;
     }
 
-    const data = await this.client.api.guilds(this.guild.id).bans(user).get();
+    const data = await this.client.rest.get(Routes.guildBan(this.guild.id, user));
     return this._add(data, cache);
   }
 
   async _fetchMany(cache) {
-    const data = await this.client.api.guilds(this.guild.id).bans.get();
+    const data = await this.client.rest.get(Routes.guildBans(this.guild.id));
     return data.reduce((col, ban) => col.set(ban.user.id, this._add(ban, cache)), new Collection());
   }
 
@@ -142,15 +143,12 @@ class GuildBanManager extends CachedManager {
     if (typeof options !== 'object') throw new TypeError('INVALID_TYPE', 'options', 'object', true);
     const id = this.client.users.resolveId(user);
     if (!id) throw new Error('BAN_RESOLVE_ID', true);
-    await this.client.api
-      .guilds(this.guild.id)
-      .bans(id)
-      .put({
-        data: {
-          reason: options.reason,
-          delete_message_days: options.days,
-        },
-      });
+    await this.client.rest.put(Routes.guildBan(this.guild.id, id), {
+      body: {
+        reason: options.reason,
+        delete_message_days: options.days,
+      },
+    });
     if (user instanceof GuildMember) return user;
     const _user = this.client.users.resolve(id);
     if (_user) {
@@ -173,7 +171,7 @@ class GuildBanManager extends CachedManager {
   async remove(user, reason) {
     const id = this.client.users.resolveId(user);
     if (!id) throw new Error('BAN_RESOLVE_ID');
-    await this.client.api.guilds(this.guild.id).bans(id).delete({ reason });
+    await this.client.rest.delete(Routes.guildBan(this.guild.id, id), { reason });
     return this.client.users.resolve(user);
   }
 }

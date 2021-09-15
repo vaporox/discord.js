@@ -29,8 +29,8 @@ class PartialGroupDMChannel extends Channel {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  iconURL({ format, size } = {}) {
-    return this.icon && this.client.rest.cdn.GDMIcon(this.id, this.icon, format, size);
+  iconURL(options = {}) {
+    return this.icon && this.client.rest.cdn.channelIcon(this.id, this.icon, options);
   }
 
   delete() {

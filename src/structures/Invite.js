@@ -1,10 +1,10 @@
 'use strict';
 
+const { RouteBases } = require('discord-api-types');
 const Base = require('./Base');
 const IntegrationApplication = require('./IntegrationApplication');
 const InviteStageInstance = require('./InviteStageInstance');
 const { Error } = require('../errors');
-const { Endpoints } = require('../util/Constants');
 const Permissions = require('../util/Permissions');
 
 /**
@@ -182,7 +182,7 @@ class Invite extends Base {
    * @readonly
    */
   get url() {
-    return Endpoints.invite(this.client.options.http.invite, this.code);
+    return `${RouteBases.invite}/${this.code}`;
   }
 
   /**

@@ -427,8 +427,8 @@ class Guild extends AnonymousGuild {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  bannerURL({ format, size } = {}) {
-    return this.banner && this.client.rest.cdn.Banner(this.id, this.banner, format, size);
+  bannerURL(options = {}) {
+    return this.banner && this.client.rest.cdn.banner(this.id, this.banner, options);
   }
 
   /**
@@ -445,8 +445,8 @@ class Guild extends AnonymousGuild {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  splashURL({ format, size } = {}) {
-    return this.splash && this.client.rest.cdn.Splash(this.id, this.splash, format, size);
+  splashURL(options = {}) {
+    return this.splash && this.client.rest.cdn.splash(this.id, this.splash, options);
   }
 
   /**
@@ -454,8 +454,8 @@ class Guild extends AnonymousGuild {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  discoverySplashURL({ format, size } = {}) {
-    return this.discoverySplash && this.client.rest.cdn.DiscoverySplash(this.id, this.discoverySplash, format, size);
+  discoverySplashURL(options = {}) {
+    return this.discoverySplash && this.client.rest.cdn.discoverySplash(this.id, this.discoverySplash, options);
   }
 
   /**

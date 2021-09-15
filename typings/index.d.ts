@@ -20,12 +20,12 @@ import {
   userMention,
 } from '@discordjs/builders';
 import { Collection } from '@discordjs/collection';
+import { RateLimitData, REST, RESTOptions } from '@discordjs/rest';
 import { ChildProcess } from 'child_process';
 import {
   APIActionRowComponent,
   APIApplicationCommand,
   APIApplicationCommandInteractionData,
-  APIApplicationCommandInteractionDataOption,
   APIApplicationCommandOption,
   APIApplicationCommandPermission,
   APIAuditLogChange,
@@ -48,7 +48,6 @@ import {
   Snowflake,
 } from 'discord-api-types/v9';
 import { EventEmitter } from 'events';
-import { AgentOptions } from 'https';
 import { Stream } from 'stream';
 import { MessagePort, Worker } from 'worker_threads';
 import * as WebSocket from 'ws';
@@ -84,7 +83,6 @@ import {
   RawBaseGuildData,
   RawChannelData,
   RawClientApplicationData,
-  RawCommandInteractionData,
   RawDMChannelData,
   RawEmojiData,
   RawGuildAuditLogData,
@@ -255,13 +253,11 @@ export class Base {
 
 export class BaseClient extends EventEmitter {
   public constructor(options?: ClientOptions | WebhookClientOptions);
-  private readonly api: unknown;
-  private rest: unknown;
   private decrementMaxListeners(): void;
   private incrementMaxListeners(): void;
 
   public options: ClientOptions | WebhookClientOptions;
-  public destroy(): void;
+  public rest: REST;
   public toJSON(...props: Record<string, boolean | string>[]): unknown;
 }
 
@@ -631,17 +627,6 @@ export class DataResolver extends null {
   public static resolveGuildTemplateCode(data: GuildTemplateResolvable): string;
 }
 
-export class DiscordAPIError extends Error {
-  public constructor(error: unknown, status: number, request: unknown);
-  private static flattenErrors(obj: unknown, key: string): string[];
-
-  public code: number;
-  public method: string;
-  public path: string;
-  public httpStatus: number;
-  public requestData: HTTPErrorData;
-}
-
 export class DMChannel extends TextBasedChannel(Channel, ['bulkDelete']) {
   public constructor(client: Client, data?: RawDMChannelData);
   public messages: MessageManager;
@@ -953,22 +938,6 @@ export class GuildPreviewEmoji extends BaseGuildEmoji {
   public constructor(client: Client, data: RawGuildEmojiData, guild: GuildPreview);
   public guild: GuildPreview;
   public roles: Snowflake[];
-}
-
-export class HTTPError extends Error {
-  public constructor(message: string, name: string, code: number, request: unknown);
-  public code: number;
-  public method: string;
-  public name: string;
-  public path: string;
-  public requestData: HTTPErrorData;
-}
-
-// tslint:disable-next-line:no-empty-interface - Merge RateLimitData into RateLimitError to not have to type it again
-export interface RateLimitError extends RateLimitData {}
-export class RateLimitError extends Error {
-  public constructor(data: RateLimitData);
-  public name: 'RateLimitError';
 }
 
 export class Integration extends Base {
@@ -2264,56 +2233,6 @@ export const Constants: {
     [key: string]: unknown;
   };
   UserAgent: string;
-  Endpoints: {
-    botGateway: string;
-    invite: (root: string, code: string) => string;
-    CDN: (root: string) => {
-      Emoji: (emojiId: Snowflake, format: DynamicImageFormat) => string;
-      Asset: (name: string) => string;
-      DefaultAvatar: (discriminator: number) => string;
-      Avatar: (
-        userId: Snowflake,
-        hash: string,
-        format: DynamicImageFormat,
-        size: AllowedImageSize,
-        dynamic: boolean,
-      ) => string;
-      Banner: (
-        id: Snowflake,
-        hash: string,
-        format: DynamicImageFormat,
-        size: AllowedImageSize,
-        dynamic: boolean,
-      ) => string;
-      Icon: (
-        guildId: Snowflake,
-        hash: string,
-        format: DynamicImageFormat,
-        size: AllowedImageSize,
-        dynamic: boolean,
-      ) => string;
-      AppIcon: (
-        appId: Snowflake,
-        hash: string,
-        { format, size }: { format: AllowedImageFormat; size: AllowedImageSize },
-      ) => string;
-      AppAsset: (
-        appId: Snowflake,
-        hash: string,
-        { format, size }: { format: AllowedImageFormat; size: AllowedImageSize },
-      ) => string;
-      StickerPackBanner: (bannerId: Snowflake, format: AllowedImageFormat, size: AllowedImageSize) => string;
-      GDMIcon: (channelId: Snowflake, hash: string, format: AllowedImageFormat, size: AllowedImageSize) => string;
-      Splash: (guildId: Snowflake, hash: string, format: AllowedImageFormat, size: AllowedImageSize) => string;
-      DiscoverySplash: (guildId: Snowflake, hash: string, format: AllowedImageFormat, size: AllowedImageSize) => string;
-      TeamIcon: (
-        teamId: Snowflake,
-        hash: string,
-        { format, size }: { format: AllowedImageFormat; size: AllowedImageSize },
-      ) => string;
-      Sticker: (stickerId: Snowflake, stickerFormat: StickerFormatType) => string;
-    };
-  };
   WSCodes: {
     1000: 'WS_CLOSE_REQUESTED';
     4004: 'TOKEN_INVALID';
@@ -2331,7 +2250,6 @@ export const Constants: {
   Colors: ConstantsColors;
   Status: ConstantsStatus;
   Opcodes: ConstantsOpcodes;
-  APIErrors: APIErrors;
   ChannelTypes: EnumHolder<typeof ChannelTypes>;
   ThreadChannelTypes: ThreadChannelTypes[];
   TextBasedChannelTypes: TextBasedChannelTypes[];
@@ -2402,7 +2320,7 @@ export class ApplicationCommandManager<
     PermissionsGuildType,
     null
   >;
-  private commandPath({ id, guildId }: { id?: Snowflake; guildId?: Snowflake }): unknown;
+  private commandPath({ id, guildId }: { id?: Snowflake; guildId?: Snowflake }): string;
   public create(command: ApplicationCommandData): Promise<ApplicationCommandScope>;
   public create(command: ApplicationCommandData, guildId: Snowflake): Promise<ApplicationCommand>;
   public delete(command: ApplicationCommandResolvable, guildId?: Snowflake): Promise<ApplicationCommandScope | null>;
@@ -2470,7 +2388,7 @@ export class ApplicationCommandPermissionsManager<
       fullPermissions: GuildApplicationCommandPermissionData[];
     },
   ): Promise<Collection<Snowflake, ApplicationCommandPermissions[]>>;
-  private permissionsPath(guildId: Snowflake, commandId?: Snowflake): unknown;
+  private permissionsPath(guildId: Snowflake, commandId?: Snowflake): string;
   private static transformPermissions(
     permissions: ApplicationCommandPermissionData,
     received: true,
@@ -2859,145 +2777,6 @@ export type AllowedThreadTypeForNewsChannel = 'GUILD_NEWS_THREAD' | 10;
 
 export type AllowedThreadTypeForTextChannel = 'GUILD_PUBLIC_THREAD' | 'GUILD_PRIVATE_THREAD' | 11 | 12;
 
-export interface APIErrors {
-  UNKNOWN_ACCOUNT: 10001;
-  UNKNOWN_APPLICATION: 10002;
-  UNKNOWN_CHANNEL: 10003;
-  UNKNOWN_GUILD: 10004;
-  UNKNOWN_INTEGRATION: 10005;
-  UNKNOWN_INVITE: 10006;
-  UNKNOWN_MEMBER: 10007;
-  UNKNOWN_MESSAGE: 10008;
-  UNKNOWN_OVERWRITE: 10009;
-  UNKNOWN_PROVIDER: 10010;
-  UNKNOWN_ROLE: 10011;
-  UNKNOWN_TOKEN: 10012;
-  UNKNOWN_USER: 10013;
-  UNKNOWN_EMOJI: 10014;
-  UNKNOWN_WEBHOOK: 10015;
-  UNKNOWN_WEBHOOK_SERVICE: 10016;
-  UNKNOWN_SESSION: 10020;
-  UNKNOWN_BAN: 10026;
-  UNKNOWN_SKU: 10027;
-  UNKNOWN_STORE_LISTING: 10028;
-  UNKNOWN_ENTITLEMENT: 10029;
-  UNKNOWN_BUILD: 10030;
-  UNKNOWN_LOBBY: 10031;
-  UNKNOWN_BRANCH: 10032;
-  UNKNOWN_STORE_DIRECTORY_LAYOUT: 10033;
-  UNKNOWN_REDISTRIBUTABLE: 10036;
-  UNKNOWN_GIFT_CODE: 10038;
-  UNKNOWN_STREAM: 10049;
-  UNKNOWN_PREMIUM_SERVER_SUBSCRIBE_COOLDOWN: 10050;
-  UNKNOWN_GUILD_TEMPLATE: 10057;
-  UNKNOWN_DISCOVERABLE_SERVER_CATEGORY: 10059;
-  UNKNOWN_STICKER: 10060;
-  UNKNOWN_INTERACTION: 10062;
-  UNKNOWN_APPLICATION_COMMAND: 10063;
-  UNKNOWN_APPLICATION_COMMAND_PERMISSIONS: 10066;
-  UNKNOWN_STAGE_INSTANCE: 10067;
-  UNKNOWN_GUILD_MEMBER_VERIFICATION_FORM: 10068;
-  UNKNOWN_GUILD_WELCOME_SCREEN: 10069;
-  UNKNOWN_GUILD_SCHEDULED_EVENT: 10070;
-  UNKNOWN_GUILD_SCHEDULED_EVENT_USER: 10071;
-  BOT_PROHIBITED_ENDPOINT: 20001;
-  BOT_ONLY_ENDPOINT: 20002;
-  CANNOT_SEND_EXPLICIT_CONTENT: 20009;
-  NOT_AUTHORIZED: 20012;
-  SLOWMODE_RATE_LIMIT: 20016;
-  ACCOUNT_OWNER_ONLY: 20018;
-  ANNOUNCEMENT_EDIT_LIMIT_EXCEEDED: 20022;
-  CHANNEL_HIT_WRITE_RATELIMIT: 20028;
-  CONTENT_NOT_ALLOWED: 20031;
-  GUILD_PREMIUM_LEVEL_TOO_LOW: 20035;
-  MAXIMUM_GUILDS: 30001;
-  MAXIMUM_FRIENDS: 30002;
-  MAXIMUM_PINS: 30003;
-  MAXIMUM_RECIPIENTS: 30004;
-  MAXIMUM_ROLES: 30005;
-  MAXIMUM_WEBHOOKS: 30007;
-  MAXIMUM_EMOJIS: 30008;
-  MAXIMUM_REACTIONS: 30010;
-  MAXIMUM_CHANNELS: 30013;
-  MAXIMUM_ATTACHMENTS: 30015;
-  MAXIMUM_INVITES: 30016;
-  MAXIMUM_ANIMATED_EMOJIS: 30018;
-  MAXIMUM_SERVER_MEMBERS: 30019;
-  MAXIMUM_NUMBER_OF_SERVER_CATEGORIES: 30030;
-  GUILD_ALREADY_HAS_TEMPLATE: 30031;
-  MAXIMUM_THREAD_PARICIPANTS: 30033;
-  MAXIMUM_NON_GUILD_MEMBERS_BANS: 30035;
-  MAXIMUM_BAN_FETCHES: 30037;
-  MAXIMUM_NUMBER_OF_STICKERS_REACHED: 30039;
-  MAXIMUM_PRUNE_REQUESTS: 30040;
-  MAXIMUM_GUILD_WIDGET_SETTINGS_UPDATE: 30042;
-  UNAUTHORIZED: 40001;
-  ACCOUNT_VERIFICATION_REQUIRED: 40002;
-  DIRECT_MESSAGES_TOO_FAST: 40003;
-  REQUEST_ENTITY_TOO_LARGE: 40005;
-  FEATURE_TEMPORARILY_DISABLED: 40006;
-  USER_BANNED: 40007;
-  TARGET_USER_NOT_CONNECTED_TO_VOICE: 40032;
-  ALREADY_CROSSPOSTED: 40033;
-  MISSING_ACCESS: 50001;
-  INVALID_ACCOUNT_TYPE: 50002;
-  CANNOT_EXECUTE_ON_DM: 50003;
-  EMBED_DISABLED: 50004;
-  CANNOT_EDIT_MESSAGE_BY_OTHER: 50005;
-  CANNOT_SEND_EMPTY_MESSAGE: 50006;
-  CANNOT_MESSAGE_USER: 50007;
-  CANNOT_SEND_MESSAGES_IN_VOICE_CHANNEL: 50008;
-  CHANNEL_VERIFICATION_LEVEL_TOO_HIGH: 50009;
-  OAUTH2_APPLICATION_BOT_ABSENT: 50010;
-  MAXIMUM_OAUTH2_APPLICATIONS: 50011;
-  INVALID_OAUTH_STATE: 50012;
-  MISSING_PERMISSIONS: 50013;
-  INVALID_AUTHENTICATION_TOKEN: 50014;
-  NOTE_TOO_LONG: 50015;
-  INVALID_BULK_DELETE_QUANTITY: 50016;
-  CANNOT_PIN_MESSAGE_IN_OTHER_CHANNEL: 50019;
-  INVALID_OR_TAKEN_INVITE_CODE: 50020;
-  CANNOT_EXECUTE_ON_SYSTEM_MESSAGE: 50021;
-  CANNOT_EXECUTE_ON_CHANNEL_TYPE: 50024;
-  INVALID_OAUTH_TOKEN: 50025;
-  MISSING_OAUTH_SCOPE: 50026;
-  INVALID_WEBHOOK_TOKEN: 50027;
-  INVALID_ROLE: 50028;
-  INVALID_RECIPIENTS: 50033;
-  BULK_DELETE_MESSAGE_TOO_OLD: 50034;
-  INVALID_FORM_BODY: 50035;
-  INVITE_ACCEPTED_TO_GUILD_NOT_CONTAINING_BOT: 50036;
-  INVALID_API_VERSION: 50041;
-  FILE_UPLOADED_EXCEEDS_MAXIMUM_SIZE: 50045;
-  INVALID_FILE_UPLOADED: 50046;
-  CANNOT_SELF_REDEEM_GIFT: 50054;
-  PAYMENT_SOURCE_REQUIRED: 50070;
-  CANNOT_DELETE_COMMUNITY_REQUIRED_CHANNEL: 50074;
-  INVALID_STICKER_SENT: 50081;
-  INVALID_THREAD_ARCHIVE_STATE: 50083;
-  INVALID_THREAD_NOTIFICATION_SETTINGS: 50084;
-  PARAMETER_EARLIER_THAN_CREATION: 50085;
-  GUILD_NOT_AVAILABLE_IN_LOCATION: 50095;
-  GUILD_MONETIZATION_REQUIRED: 50097;
-  TWO_FACTOR_REQUIRED: 60003;
-  NO_USERS_WITH_DISCORDTAG_EXIST: 80004;
-  REACTION_BLOCKED: 90001;
-  RESOURCE_OVERLOADED: 130000;
-  STAGE_ALREADY_OPEN: 150006;
-  CANNOT_REPLY_WITHOUT_READ_MESSAGE_HISTORY_PERMISSION: 160002;
-  MESSAGE_ALREADY_HAS_THREAD: 160004;
-  THREAD_LOCKED: 160005;
-  MAXIMUM_ACTIVE_THREADS: 160006;
-  MAXIMUM_ACTIVE_ANNOUNCEMENT_THREADS: 160007;
-  INVALID_JSON_FOR_UPLOADED_LOTTIE_FILE: 170001;
-  UPLOADED_LOTTIES_CANNOT_CONTAIN_RASTERIZED_IMAGES: 170002;
-  STICKER_MAXIMUM_FRAMERATE_EXCEEDED: 170003;
-  STICKER_FRAME_COUNT_EXCEEDS_MAXIMUM_OF_1000_FRAMES: 170004;
-  LOTTIE_ANIMATION_MAXIMUM_DIMENSIONS_EXCEEDED: 170005;
-  STICKER_FRAME_RATE_IS_TOO_SMALL_OR_TOO_LARGE: 170006;
-  STICKER_ANIMATION_DURATION_EXCEEDS_MAXIMUM_OF_5_SECONDS: 170007;
-}
-
 export interface ApplicationAsset {
   name: string;
   id: Snowflake;
@@ -3341,21 +3120,13 @@ export interface ClientOptions {
   /** @deprecated Use `makeCache` with a `LimitedCollection` for `MessageManager` instead. */
   messageSweepInterval?: number;
   allowedMentions?: MessageMentionOptions;
-  invalidRequestWarningInterval?: number;
   partials?: PartialTypes[];
   restWsBridgeTimeout?: number;
-  restTimeOffset?: number;
-  restRequestTimeout?: number;
-  restGlobalRateLimit?: number;
-  restSweepInterval?: number;
-  retryLimit?: number;
   failIfNotExists?: boolean;
-  userAgentSuffix?: string[];
   presence?: PresenceData;
   intents: BitFieldResolvable<IntentsString, number>;
   ws?: WebSocketOptions;
-  http?: HTTPOptions;
-  rejectOnRateLimit?: string[] | ((data: RateLimitData) => boolean | Promise<boolean>);
+  rest?: RESTOptions;
 }
 
 export type ClientPresenceStatus = 'online' | 'idle' | 'dnd';
@@ -3998,22 +3769,6 @@ export interface HTTPAttachmentData {
   file: Buffer | Stream;
 }
 
-export interface HTTPErrorData {
-  json: unknown;
-  files: HTTPAttachmentData[];
-}
-
-export interface HTTPOptions {
-  agent?: Omit<AgentOptions, 'keepAlive'>;
-  api?: string;
-  version?: number;
-  host?: string;
-  cdn?: string;
-  invite?: string;
-  template?: string;
-  headers?: Record<string, string>;
-}
-
 export interface ImageURLOptions extends Omit<StaticImageURLOptions, 'format'> {
   dynamic?: boolean;
   format?: DynamicImageFormat;
@@ -4537,15 +4292,6 @@ export type PresenceStatus = PresenceStatusData | 'offline';
 
 export type PrivacyLevel = keyof typeof PrivacyLevels;
 
-export interface RateLimitData {
-  timeout: number;
-  limit: number;
-  method: string;
-  path: string;
-  route: string;
-  global: boolean;
-}
-
 export interface InvalidRequestWarningData {
   count: number;
   remainingTime: number;
@@ -4754,10 +4500,7 @@ export interface WebhookClientDataURL {
   url: string;
 }
 
-export type WebhookClientOptions = Pick<
-  ClientOptions,
-  'allowedMentions' | 'restTimeOffset' | 'restRequestTimeout' | 'retryLimit' | 'http'
->;
+export type WebhookClientOptions = Pick<ClientOptions, 'allowedMentions' | 'rest'>;
 
 export interface WebhookEditData {
   name?: string;

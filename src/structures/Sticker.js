@@ -129,7 +129,7 @@ class Sticker extends Base {
    * @type {string}
    */
   get url() {
-    return this.client.rest.cdn.Sticker(this.id, this.format);
+    return this.client.rest.cdn.sticker(this.id, this.format === 'LOTTIE' ? 'json' : 'png');
   }
 
   /**

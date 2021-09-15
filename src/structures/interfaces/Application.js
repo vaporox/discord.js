@@ -1,6 +1,6 @@
 'use strict';
 
-const { ClientApplicationAssetTypes, Endpoints } = require('../../util/Constants');
+const { ClientApplicationAssetTypes } = require('../../util/Constants');
 const SnowflakeUtil = require('../../util/SnowflakeUtil');
 const Base = require('../Base');
 
@@ -65,9 +65,9 @@ class Application extends Base {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  iconURL({ format, size } = {}) {
+  iconURL(options = {}) {
     if (!this.icon) return null;
-    return this.client.rest.cdn.AppIcon(this.id, this.icon, { format, size });
+    return this.client.rest.cdn.appIcon(this.id, this.icon, options);
   }
 
   /**
@@ -75,9 +75,9 @@ class Application extends Base {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  coverURL({ format, size } = {}) {
+  coverURL(options = {}) {
     if (!this.cover) return null;
-    return Endpoints.CDN(this.client.options.http.cdn).AppIcon(this.id, this.cover, { format, size });
+    return this.client.rest.cdn.appIcon(this.id, this.cover, options);
   }
 
   /**

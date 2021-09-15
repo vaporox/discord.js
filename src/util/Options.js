@@ -1,28 +1,24 @@
 'use strict';
 
-/**
- * Rate limit data
- * @typedef {Object} RateLimitData
- * @property {number} timeout Time until this rate limit ends, in ms
- * @property {number} limit The maximum amount of requests of this endpoint
- * @property {string} method The http method of this request
- * @property {string} path The path of the request relative to the HTTP endpoint
- * @property {string} route The route of the request relative to the HTTP endpoint
- * @property {boolean} global Whether this is a global rate limit
- */
-
-/**
- * Whether this rate limit should throw an Error
- * @typedef {Function} RateLimitQueueFilter
- * @param {RateLimitData} rateLimitData The data of this rate limit
- * @returns {boolean|Promise<boolean>}
- */
+const { DefaultRestOptions } = require('@discordjs/rest');
 
 /**
  * @typedef {Function} CacheFactory
  * @param {Function} manager The manager class the cache is being requested from.
  * @param {Function} holds The class that the cache will hold.
  * @returns {Collection} A Collection used to store the cache of the manager.
+ */
+
+/**
+ * WebSocket options (these are left as snake_case to match the API)
+ * @typedef {Object} WebsocketOptions
+ * @property {number} [large_threshold=50] Number of members in a guild after which offline users will no longer be
+ * sent in the initial guild member list, must be between 50 and 250
+ */
+
+/**
+ * @external RESTOptions
+ * @see {@link https://www.npmjs.com/package/@discordjs/rest}
  */
 
 /**
@@ -43,60 +39,17 @@
  * How frequently to remove messages from the cache that are older than the message cache lifetime
  * (in seconds, 0 for never)
  * @property {MessageMentionOptions} [allowedMentions] Default value for {@link MessageOptions#allowedMentions}
- * @property {number} [invalidRequestWarningInterval=0] The number of invalid REST requests (those that return
- * 401, 403, or 429) in a 10 minute window between emitted warnings (0 for no warnings). That is, if set to 500,
- * warnings will be emitted at invalid request number 500, 1000, 1500, and so on.
  * @property {PartialType[]} [partials] Structures allowed to be partial. This means events can be emitted even when
  * they're missing all the data for a particular structure. See the "Partial Structures" topic on the
  * [guide](https://discordjs.guide/popular-topics/partials.html) for some
  * important usage information, as partials require you to put checks in place when handling data.
  * @property {number} [restWsBridgeTimeout=5000] Maximum time permitted between REST responses and their
  * corresponding websocket events
- * @property {number} [restTimeOffset=500] Extra time in milliseconds to wait before continuing to make REST
- * requests (higher values will reduce rate-limiting errors on bad connections)
- * @property {number} [restRequestTimeout=15000] Time to wait before cancelling a REST request, in milliseconds
- * @property {number} [restSweepInterval=60] How frequently to delete inactive request buckets, in seconds
- * (or 0 for never)
- * @property {number} [restGlobalRateLimit=0] How many requests to allow sending per second (0 for unlimited, 50 for
- * the standard global limit used by Discord)
- * @property {string[]|RateLimitQueueFilter} [rejectOnRateLimit] Decides how rate limits and pre-emptive throttles
- * should be handled. If this option is an array containing the prefix of the request route (e.g. /channels to match any
- * route starting with /channels, such as /channels/222197033908436994/messages) or a function returning true, a
- * {@link RateLimitError} will be thrown. Otherwise the request will be queued for later
- * @property {number} [retryLimit=1] How many times to retry on 5XX errors (Infinity for indefinite amount of retries)
  * @property {boolean} [failIfNotExists=true] Default value for {@link ReplyMessageOptions#failIfNotExists}
- * @property {string[]} [userAgentSuffix] An array of additional bot info to be appended to the end of the required
- * [User Agent](https://discord.com/developers/docs/reference#user-agent) header
  * @property {PresenceData} [presence={}] Presence data to use upon login
  * @property {IntentsResolvable} intents Intents to enable for this connection
  * @property {WebsocketOptions} [ws] Options for the WebSocket
- * @property {HTTPOptions} [http] HTTP options
- */
-
-/**
- * WebSocket options (these are left as snake_case to match the API)
- * @typedef {Object} WebsocketOptions
- * @property {number} [large_threshold=50] Number of members in a guild after which offline users will no longer be
- * sent in the initial guild member list, must be between 50 and 250
- */
-
-/**
- * HTTPS Agent options.
- * @typedef {Object} AgentOptions
- * @see {@link https://nodejs.org/api/https.html#https_class_https_agent}
- * @see {@link https://nodejs.org/api/http.html#http_new_agent_options}
- */
-
-/**
- * HTTP options
- * @typedef {Object} HTTPOptions
- * @property {number} [version=9] API version to use
- * @property {AgentOptions} [agent={}] HTTPS Agent options
- * @property {string} [api='https://discord.com/api'] Base url of the API
- * @property {string} [cdn='https://cdn.discordapp.com'] Base url of the CDN
- * @property {string} [invite='https://discord.gg'] Base url of invites
- * @property {string} [template='https://discord.new'] Base url of templates
- * @property {Object} [headers] Additional headers to send for all API requests
+ * @property {RESTOptions} [rest] Options for the REST manager
  */
 
 /**
@@ -113,16 +66,9 @@ class Options extends null {
       makeCache: this.cacheWithLimits(this.defaultMakeCacheSettings),
       messageCacheLifetime: 0,
       messageSweepInterval: 0,
-      invalidRequestWarningInterval: 0,
       partials: [],
       restWsBridgeTimeout: 5_000,
-      restRequestTimeout: 15_000,
-      restGlobalRateLimit: 0,
-      retryLimit: 1,
-      restTimeOffset: 500,
-      restSweepInterval: 60,
       failIfNotExists: true,
-      userAgentSuffix: [],
       presence: {},
       ws: {
         large_threshold: 50,
@@ -134,14 +80,7 @@ class Options extends null {
         },
         version: 9,
       },
-      http: {
-        agent: {},
-        version: 9,
-        api: 'https://discord.com/api',
-        cdn: 'https://cdn.discordapp.com',
-        invite: 'https://discord.gg',
-        template: 'https://discord.new',
-      },
+      rest: DefaultRestOptions,
     };
   }
 

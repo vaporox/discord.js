@@ -148,9 +148,9 @@ class User extends Base {
    * @param {ImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  avatarURL({ format, size, dynamic } = {}) {
+  avatarURL(options = {}) {
     if (!this.avatar) return null;
-    return this.client.rest.cdn.Avatar(this.id, this.avatar, format, size, dynamic);
+    return this.client.rest.cdn.avatar(this.id, this.avatar, options);
   }
 
   /**
@@ -159,7 +159,7 @@ class User extends Base {
    * @readonly
    */
   get defaultAvatarURL() {
-    return this.client.rest.cdn.DefaultAvatar(this.discriminator % 5);
+    return this.client.rest.cdn.defaultAvatar(this.discriminator % 5);
   }
 
   /**
@@ -189,9 +189,9 @@ class User extends Base {
    * @param {ImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  bannerURL({ format, size, dynamic } = {}) {
+  bannerURL(options = {}) {
     if (!this.banner) return null;
-    return this.client.rest.cdn.Banner(this.id, this.banner, format, size, dynamic);
+    return this.client.rest.cdn.banner(this.id, this.banner, options);
   }
 
   /**

@@ -84,9 +84,9 @@ class Team extends Base {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  iconURL({ format, size } = {}) {
+  iconURL(options = {}) {
     if (!this.icon) return null;
-    return this.client.rest.cdn.TeamIcon(this.id, this.icon, { format, size });
+    return this.client.rest.cdn.teamIcon(this.id, this.icon, options);
   }
 
   /**

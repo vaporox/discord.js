@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const BaseGuildEmojiManager = require('./BaseGuildEmojiManager');
 const { TypeError } = require('../errors');
 const DataResolver = require('../util/DataResolver');
@@ -65,7 +66,7 @@ class GuildEmojiManager extends BaseGuildEmojiManager {
       }
     }
 
-    const emoji = await this.client.api.guilds(this.guild.id).emojis.post({ data, reason });
+    const emoji = await this.client.rest.post(Routes.guildEmojis(this.guild.id), { body: data, reason });
     return this.client.actions.GuildEmojiCreate.handle(this.guild, emoji).emoji;
   }
 
@@ -91,11 +92,11 @@ class GuildEmojiManager extends BaseGuildEmojiManager {
         const existing = this.cache.get(id);
         if (existing) return existing;
       }
-      const emoji = await this.client.api.guilds(this.guild.id).emojis(id).get();
+      const emoji = await this.client.rest.get(Routes.guildEmoji(this.guild.id, id));
       return this._add(emoji, cache);
     }
 
-    const data = await this.client.api.guilds(this.guild.id).emojis.get();
+    const data = await this.client.rest.get(Routes.guildEmojis(this.guild.id));
     const emojis = new Collection();
     for (const emoji of data) emojis.set(emoji.id, this._add(emoji, cache));
     return emojis;

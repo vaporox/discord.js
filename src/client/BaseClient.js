@@ -1,7 +1,8 @@
 'use strict';
 
 const EventEmitter = require('events');
-const RESTManager = require('../rest/RESTManager');
+const { REST, RESTEvents } = require('@discordjs/rest');
+const { Events } = require('../util/Constants');
 const Options = require('../util/Options');
 const Util = require('../util/Util');
 
@@ -20,29 +21,28 @@ class BaseClient extends EventEmitter {
     this.options = Util.mergeDefault(Options.createDefault(), options);
 
     /**
-     * The REST manager of the client
-     * @type {RESTManager}
-     * @private
+     * @external REST
+     * @see {@link https://www.npmjs.com/package/@discordjs/rest}
      */
-    this.rest = new RESTManager(this);
-  }
 
-  /**
-   * API shortcut
-   * @type {Object}
-   * @readonly
-   * @private
-   */
-  get api() {
-    return this.rest.api;
-  }
+    /**
+     * @external RateLimitData
+     * @see {@link https://www.npmjs.com/package/@discordjs/rest}
+     */
 
-  /**
-   * Destroys all assets used by the base client.
-   * @returns {void}
-   */
-  destroy() {
-    if (this.rest.sweepInterval) clearInterval(this.rest.sweepInterval);
+    /**
+     * Emitted when the client hits a rate limit while making a request
+     * @event Client#rateLimit
+     * @param {RateLimitData} rateLimitData Object containing the rate limit info
+     */
+
+    /**
+     * The REST manager of the client
+     * @type {REST}
+     */
+    this.rest = new REST(this.options.rest)
+      .on(RESTEvents.Debug, data => this.emit(Events.DEBUG, data))
+      .on(RESTEvents.RateLimited, data => this.emit(Events.RATE_LIMIT, data));
   }
 
   /**

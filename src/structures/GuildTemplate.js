@@ -1,5 +1,6 @@
 'use strict';
 
+const { RouteBases } = require('discord-api-types');
 const Base = require('./Base');
 const { Events } = require('../util/Constants');
 const DataResolver = require('../util/DataResolver');
@@ -201,7 +202,7 @@ class GuildTemplate extends Base {
    * @readonly
    */
   get url() {
-    return `${this.client.options.http.template}/${this.code}`;
+    return `${RouteBases.template}/${this.code}`;
   }
 
   /**

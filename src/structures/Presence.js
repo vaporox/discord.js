@@ -342,14 +342,8 @@ class RichPresenceAssets {
    * @param {StaticImageURLOptions} [options] Options for the image url
    * @returns {?string}
    */
-  smallImageURL({ format, size } = {}) {
-    return (
-      this.smallImage &&
-      this.activity.presence.client.rest.cdn.AppAsset(this.activity.applicationId, this.smallImage, {
-        format,
-        size,
-      })
-    );
+  smallImageURL(options = {}) {
+    return this.smallImage && this.client.rest.cdn.appAsset(this.activity.applicationId, this.smallImage, options);
   }
 
   /**
@@ -357,17 +351,14 @@ class RichPresenceAssets {
    * @param {StaticImageURLOptions} [options] Options for the image url
    * @returns {?string}
    */
-  largeImageURL({ format, size } = {}) {
+  largeImageURL(options = {}) {
     if (!this.largeImage) return null;
     if (/^spotify:/.test(this.largeImage)) {
       return `https://i.scdn.co/image/${this.largeImage.slice(8)}`;
     } else if (/^twitch:/.test(this.largeImage)) {
       return `https://static-cdn.jtvnw.net/previews-ttv/live_user_${this.largeImage.slice(7)}.png`;
     }
-    return this.activity.presence.client.rest.cdn.AppAsset(this.activity.applicationId, this.largeImage, {
-      format,
-      size,
-    });
+    return this.client.rest.cdn.appAsset(this.activity.applicationId, this.largeImage, options);
   }
 }
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const CachedManager = require('./CachedManager');
 const { TypeError } = require('../errors');
 const Message = require('../structures/Message');
@@ -81,7 +82,7 @@ class MessageManager extends CachedManager {
    *   .catch(console.error);
    */
   async fetchPinned(cache = true) {
-    const data = await this.client.api.channels[this.channel.id].pins.get();
+    const data = await this.client.rest.get(Routes.channelPins(this.channel.id));
     const messages = new Collection();
     for (const message of data) messages.set(message.id, this._add(message, cache));
     return messages;
@@ -128,7 +129,11 @@ class MessageManager extends CachedManager {
     )
       .resolveData()
       .resolveFiles();
-    const d = await this.client.api.channels[this.channel.id].messages[messageId].patch({ data, files });
+
+    const d = await this.client.rest.patch(Routes.channelMessage(this.channel.id, messageId), {
+      body: data,
+      attachments: files,
+    });
 
     const existing = this.cache.get(messageId);
     if (existing) {

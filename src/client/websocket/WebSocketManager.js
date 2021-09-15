@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events');
 const { Collection } = require('@discordjs/collection');
-const { RPCErrorCodes } = require('discord-api-types/v9');
+const { RPCErrorCodes, Routes } = require('discord-api-types/v9');
 const WebSocketShard = require('./WebSocketShard');
 const PacketHandlers = require('./handlers');
 const { Error } = require('../../errors');
@@ -130,7 +130,7 @@ class WebSocketManager extends EventEmitter {
       url: gatewayURL,
       shards: recommendedShards,
       session_start_limit: sessionStartLimit,
-    } = await this.client.api.gateway.bot.get().catch(error => {
+    } = await this.client.rest.get(Routes.gatewayBot()).catch(error => {
       throw error.httpStatus === 401 ? invalidToken : error;
     });
 

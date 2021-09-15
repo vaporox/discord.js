@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const ApplicationCommandPermissionsManager = require('./ApplicationCommandPermissionsManager');
 const CachedManager = require('./CachedManager');
 const { TypeError } = require('../errors');
@@ -33,17 +34,23 @@ class ApplicationCommandManager extends CachedManager {
   }
 
   /**
-   * The APIRouter path to the commands
+   * The path to the commands
    * @param {Snowflake} [options.id] The application command's id
    * @param {Snowflake} [options.guildId] The guild's id to use in the path,
    * ignored when using a {@link GuildApplicationCommandManager}
-   * @returns {Object}
+   * @returns {string}
    * @private
    */
   commandPath({ id, guildId } = {}) {
-    let path = this.client.api.applications(this.client.application.id);
-    if (this.guild ?? guildId) path = path.guilds(this.guild?.id ?? guildId);
-    return id ? path.commands(id) : path.commands;
+    if (guildId && id) {
+      return Routes.applicationGuildCommand(this.client.application.id, this.guild?.id ?? guildId, id);
+    } else if (guildId) {
+      return Routes.applicationGuildCommands(this.client.application.id, this.guild?.id ?? guildId);
+    } else if (id) {
+      return Routes.applicationCommand(this.client.application.id, id);
+    } else {
+      return Routes.applicationCommands(this.client.application.id);
+    }
   }
 
   /**
@@ -90,11 +97,11 @@ class ApplicationCommandManager extends CachedManager {
         const existing = this.cache.get(id);
         if (existing) return existing;
       }
-      const command = await this.commandPath({ id, guildId }).get();
+      const command = await this.client.rest.get(this.commandPath({ id, guildId }));
       return this._add(command, cache);
     }
 
-    const data = await this.commandPath({ guildId }).get();
+    const data = await this.client.rest.get(this.commandPath({ guildId }));
     return data.reduce((coll, command) => coll.set(command.id, this._add(command, cache, guildId)), new Collection());
   }
 
@@ -114,8 +121,8 @@ class ApplicationCommandManager extends CachedManager {
    *   .catch(console.error);
    */
   async create(command, guildId) {
-    const data = await this.commandPath({ guildId }).post({
-      data: this.constructor.transformCommand(command),
+    const data = await this.client.rest.post(this.commandPath({ guildId }), {
+      body: this.constructor.transformCommand(command),
     });
     return this._add(data, !guildId, guildId);
   }
@@ -143,8 +150,8 @@ class ApplicationCommandManager extends CachedManager {
    *   .catch(console.error);
    */
   async set(commands, guildId) {
-    const data = await this.commandPath({ guildId }).put({
-      data: commands.map(c => this.constructor.transformCommand(c)),
+    const data = await this.client.rest.put(this.commandPath({ guildId }), {
+      body: commands.map(c => this.constructor.transformCommand(c)),
     });
     return data.reduce(
       (coll, command) => coll.set(command.id, this._add(command, !guildId, guildId)),
@@ -171,7 +178,10 @@ class ApplicationCommandManager extends CachedManager {
     const id = this.resolveId(command);
     if (!id) throw new TypeError('INVALID_TYPE', 'command', 'ApplicationCommandResolvable');
 
-    const patched = await this.commandPath({ id, guildId }).patch({ data: this.constructor.transformCommand(data) });
+    const patched = await this.client.rest.patch(this.commandPath({ id, guildId }), {
+      body: this.constructor.transformCommand(data),
+    });
+
     return this._add(patched, !guildId, guildId);
   }
 
@@ -191,7 +201,7 @@ class ApplicationCommandManager extends CachedManager {
     const id = this.resolveId(command);
     if (!id) throw new TypeError('INVALID_TYPE', 'command', 'ApplicationCommandResolvable');
 
-    await this.commandPath({ id, guildId }).delete();
+    await this.client.rest.delete(this.commandPath({ id, guildId }));
 
     const cached = this.cache.get(id);
     if (!guildId) this.cache.delete(id);

@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const CachedManager = require('./CachedManager');
 const ThreadManager = require('./ThreadManager');
 const { Error } = require('../errors');
@@ -138,8 +139,8 @@ class GuildChannelManager extends CachedManager {
       permissionOverwrites = permissionOverwrites.map(o => PermissionOverwrites.resolve(o, this.guild));
     }
 
-    const data = await this.client.api.guilds(this.guild.id).channels.post({
-      data: {
+    const data = await this.client.rest.post(Routes.guildChannels(this.guild.id), {
+      body: {
         name,
         topic,
         type: typeof type === 'number' ? type : ChannelTypes[type] ?? ChannelTypes.GUILD_TEXT,
@@ -179,13 +180,13 @@ class GuildChannelManager extends CachedManager {
     }
 
     if (id) {
-      const data = await this.client.api.channels(id).get();
+      const data = await this.client.rest.get(Routes.channel(id));
       // Since this is the guild manager, throw if on a different guild
       if (this.guild.id !== data.guild_id) throw new Error('GUILD_CHANNEL_UNOWNED');
       return this.client.channels._add(data, this.guild, { cache });
     }
 
-    const data = await this.client.api.guilds(this.guild.id).channels.get();
+    const data = await this.client.rest.get(Routes.guildChannels(this.guild.id));
     const channels = new Collection();
     for (const channel of data) channels.set(channel.id, this.client.channels._add(channel, this.guild, { cache }));
     return channels;
@@ -202,7 +203,7 @@ class GuildChannelManager extends CachedManager {
    *   .catch(console.error);
    */
   async fetchActiveThreads(cache = true) {
-    const raw = await this.client.api.guilds(this.guild.id).threads.active.get();
+    const raw = await this.client.rest.get(Routes.guildActiveThreads(this.guild.id));
     return ThreadManager._mapThreads(raw, this.client, { guild: this.guild, cache });
   }
 }

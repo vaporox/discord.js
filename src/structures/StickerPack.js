@@ -91,8 +91,8 @@ class StickerPack extends Base {
    * @param {StaticImageURLOptions} [options={}] Options for the Image URL
    * @returns {string}
    */
-  bannerURL({ format, size } = {}) {
-    return this.client.rest.cdn.StickerPackBanner(this.bannerId, format, size);
+  bannerURL(options = {}) {
+    return this.client.rest.cdn.stickerPackBanner(this.bannerId, options);
   }
 }
 

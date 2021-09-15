@@ -90,9 +90,9 @@ class BaseGuild extends Base {
    * @param {ImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  iconURL({ format, size, dynamic } = {}) {
+  iconURL(options = {}) {
     if (!this.icon) return null;
-    return this.client.rest.cdn.Icon(this.id, this.icon, format, size, dynamic);
+    return this.client.rest.cdn.icon(this.id, this.icon, options);
   }
 
   /**

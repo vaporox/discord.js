@@ -1,6 +1,7 @@
 'use strict';
 
 const { Collection } = require('@discordjs/collection');
+const { Routes } = require('discord-api-types');
 const CachedManager = require('./CachedManager');
 const { TypeError } = require('../errors');
 const MessagePayload = require('../structures/MessagePayload');
@@ -62,9 +63,13 @@ class GuildStickerManager extends CachedManager {
 
     const data = { name, tags, description: description ?? '' };
 
-    const sticker = await this.client.api
-      .guilds(this.guild.id)
-      .stickers.post({ data, files: [file], reason, dontUsePayloadJSON: true });
+    const sticker = await this.client.rest.post(Routes.guildStickers(this.guild.id), {
+      body: data,
+      attachments: [file],
+      reason,
+      dontUsePayloadJSON: true,
+    });
+
     return this.client.actions.GuildStickerCreate.handle(this.guild, sticker).sticker;
   }
 
@@ -104,8 +109,8 @@ class GuildStickerManager extends CachedManager {
     const stickerId = this.resolveId(sticker);
     if (!stickerId) throw new TypeError('INVALID_TYPE', 'sticker', 'StickerResolvable');
 
-    const d = await this.client.api.guilds(this.guild.id).stickers(stickerId).patch({
-      data,
+    const d = await this.client.rest.patch(Routes.guildSticker(this.guild.id, stickerId), {
+      body: data,
       reason,
     });
 
@@ -128,7 +133,7 @@ class GuildStickerManager extends CachedManager {
     sticker = this.resolveId(sticker);
     if (!sticker) throw new TypeError('INVALID_TYPE', 'sticker', 'StickerResolvable');
 
-    await this.client.api.guilds(this.guild.id).stickers(sticker).delete({ reason });
+    await this.client.rest.delete(Routes.guildSticker(this.guild.id, sticker), { reason });
   }
 
   /**
@@ -153,11 +158,11 @@ class GuildStickerManager extends CachedManager {
         const existing = this.cache.get(id);
         if (existing) return existing;
       }
-      const sticker = await this.client.api.guilds(this.guild.id).stickers(id).get();
+      const sticker = await this.client.rest.get(Routes.guildSticker(this.guild.id, id));
       return this._add(sticker, cache);
     }
 
-    const data = await this.client.api.guilds(this.guild.id).stickers.get();
+    const data = await this.client.rest.get(Routes.guildStickers(this.guild.id));
     return new Collection(data.map(sticker => [sticker.id, this._add(sticker, cache)]));
   }
 }

@@ -60,9 +60,9 @@ class AnonymousGuild extends BaseGuild {
    * @param {ImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  bannerURL({ format, size } = {}) {
+  bannerURL(options = {}) {
     if (!this.banner) return null;
-    return this.client.rest.cdn.Banner(this.id, this.banner, format, size);
+    return this.client.rest.cdn.banner(this.id, this.banner, options);
   }
 
   /**
@@ -70,9 +70,9 @@ class AnonymousGuild extends BaseGuild {
    * @param {ImageURLOptions} [options={}] Options for the Image URL
    * @returns {?string}
    */
-  splashURL({ format, size } = {}) {
+  splashURL(options = {}) {
     if (!this.splash) return null;
-    return this.client.rest.cdn.Splash(this.id, this.splash, format, size);
+    return this.client.rest.cdn.splash(this.id, this.splash, options);
   }
 }
 
